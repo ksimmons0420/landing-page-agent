@@ -12,11 +12,13 @@ Use `AskUserQuestion` for each:
 
 1. **Project slug** — a short kebab-case name (e.g. `acme-trial-lp`). This becomes the directory name and is used in event properties.
 2. **Target URL** — the live LP URL (or "not deployed yet" if pre-launch).
-3. **Stack** — confirm or override the default from `LP_DEFAULT_STACK`.
-4. **Primary KPI** — `lead_form_submitted` / `purchase_completed` / `signup_completed` / other.
-5. **Target CPL / CPA** — numeric.
-6. **Traffic source** — Meta / Google / TikTok / Organic / Mixed.
-7. **Audience one-liner** — who's the page for, in one sentence.
+3. **Stack** — confirm or override the default from `LP_DEFAULT_STACK`. The agent supports any builder where `<script>` can be injected into `<head>`.
+4. **Conversion goal** — confirm or override the default from `LP_DEFAULT_GOAL`. Options: lead-form, purchase, signup, booking, content, newsletter, app-install, or custom.
+5. **Primary conversion event name** — confirm or override the default from `LP_DEFAULT_CONVERSION_EVENT`. This is the event name the agent fires on success and uses as the goal in PostHog. The user can pick anything (e.g. `lead_form_submitted`, `order_completed`, `booking_completed`, `vip_waitlist_joined`, etc.).
+6. **Form tool (only if the goal involves a form)** — confirm or override the default from `LP_FORM_TOOL`. Skip entirely if the goal is purchase, app-install, or anything else without a form.
+7. **Success metric target** — numeric target for the conversion rate, CPA/CPL, or volume the project is aiming for. The agent uses this to frame test outcomes (e.g. "this hits target" vs. "still below target").
+8. **Traffic source(s)** — Meta / Google / TikTok / Organic / Email / Mixed. Drives bot-filter thresholds (Meta paid has the highest prefetch noise).
+9. **Audience one-liner** — who's the page for, in one sentence.
 
 ## Step 2 — Compliance pull-forward
 
@@ -33,19 +35,21 @@ If PostHog MCP is not connected:
 
 ## Step 4 — Generate the deploy snippet
 
-Based on the stack, read the appropriate template from the plugin's `skills/templates/` directory:
+Pick the right template based on the stack:
 
-- **Shopify** → `theme-liquid-universal-block.liquid`
-- **Webflow** → `webflow-embed.html` (coming soon — for now use the Shopify block adapted)
-- **WordPress** → `wp-snippet.php` (coming soon — for now use the Shopify block adapted)
-- **Custom HTML** → `vanilla-script-tag.html` (coming soon — for now use the Shopify block stripped of Liquid)
+- **Shopify** → `theme-liquid-universal-block.liquid` (uses Liquid path conditional)
+- **All other builders (WordPress, Webflow, Squarespace, Wix, Framer, HubSpot CMS, custom HTML, anything else)** → `vanilla-script-tag.html` (universal — works wherever a `<script>` tag in `<head>` works)
 
-Substitute:
-- `{{POSTHOG_PROJECT_TOKEN}}` from env
-- `{{EXPERIMENT_FLAG_KEY}}` = `{slug}-lp-test`
-- `{{LP_PATH_PREFIX}}` — ask the user
+Substitute the placeholders:
 
-Write the result to `~/landing-page-agent/projects/{slug}/deploy.html` (or `.liquid` / `.php`).
+- `{{POSTHOG_PROJECT_TOKEN}}` — from env
+- `{{EXPERIMENT_FLAG_KEY}}` — `{slug}-lp-test`
+- `{{CONVERSION_EVENT_NAME}}` — the project's primary conversion event (e.g. `lead_form_submitted`, `order_completed`)
+- `{{LP_PATH_PATTERN}}` — the URL path or pattern that should trigger the block (e.g. `/pages/`, `/lp/`, `*` for everywhere); ask the user
+
+Write the result to `~/landing-page-agent/projects/{slug}/deploy.html` (or `.liquid` for Shopify, or whatever extension fits the builder's expected input).
+
+For builders that don't use a file paste (Wix, Squarespace, Framer all take the snippet via UI text fields), the saved file is still the source of truth — the user copy-pastes its contents into the platform's custom-code panel.
 
 ## Step 5 — Seed the backlog
 
@@ -74,6 +78,6 @@ Echo:
 >
 > First test goes live on {date}, decision date {date+7d}. Run `/landing-page-agent:sweep` weekly to stay current.
 
-## Note
+## Note on stack support
 
-This command is shipping as MVP in v0.1.0 — for now the deploy templates only ship the Shopify pattern fully wired. Webflow / WordPress / vanilla support arrive in v0.2.0.
+v0.1.0 ships two templates: the Shopify Liquid block (when the path conditional matters) and the **vanilla `<script>` block** (universal — works on WordPress, Webflow, Squarespace, Wix, Framer, HubSpot CMS, plain HTML, and anything else where you can paste a `<script>` tag into `<head>`). Per-builder polish (auto-generated install instructions for each platform's specific UI) lands in v0.2.0; for now the agent gives the user copy-paste-ready snippet + a quick text walkthrough of where to paste it on their builder.

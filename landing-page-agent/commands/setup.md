@@ -28,33 +28,82 @@ Say:
 
 > Welcome to the Landing Page Agent. I'll walk you through setup in about 5 minutes — six quick questions, then I'll collect tokens for the platforms you said yes to, write everything to `~/.landing-page-agent/.env`, and scaffold your workspace. Then we verify.
 
-## Step 2 — Stack questionnaire (six questions)
+## Step 2 — Stack questionnaire
 
-Ask each with `AskUserQuestion`. Record the answers.
+Ask each with `AskUserQuestion`. Record the answers. **Q1 (goal) drives downstream questions** — some questions only apply for certain goals.
 
-**Q1 — Where do your landing pages live?**
+**Q1 — What's the primary conversion goal? (drives everything downstream)**
 ```
-Header: "LP host"
+Header: "Goal"
 Options:
-  - Shopify     — Shopify store with theme access
-  - Webflow     — Webflow project with custom code permission
-  - WordPress   — WordPress site with theme/snippet access
-  - Custom HTML — Static site or hand-rolled HTML where you can edit <head>
+  - Lead form fill           — Service businesses, B2B demos, local lead gen
+  - Ecommerce purchase       — Online store, checkout completion
+  - Account signup           — SaaS, app, membership
+  - Calendar booking         — Consultations, demos, sales calls
 MultiSelect: false
 ```
 
-**Q2 — Which analytics platform?**
+Then a follow-up if none of those fit:
+
+```
+Question: "If your goal wasn't in that list, which of these?"
+Header: "Other goal"
+Options:
+  - Content unlock / download   — Whitepaper, demo, gated asset
+  - Newsletter / waitlist signup
+  - App install                 — Mobile store CTA
+  - Other (you'll name it)      — I'll ask for your event name
+MultiSelect: false
+```
+
+Capture the **conversion event name** the user wants the agent to fire on success. Default suggestions (the user can override):
+- Lead form → `lead_form_submitted`
+- Ecommerce → `order_completed`
+- Signup → `signup_completed`
+- Booking → `booking_completed`
+- Content → `content_unlocked`
+- Newsletter → `newsletter_signed_up`
+- App install → `app_install_clicked`
+- Other → ask the user
+
+**Q2 — Where do your landing pages live? (the builder)**
+```
+Header: "Builder"
+Options:
+  - Shopify
+  - WordPress
+  - Webflow
+  - Squarespace
+MultiSelect: false
+```
+
+If none of those:
+
+```
+Question: "Which builder are you using?"
+Header: "Other builder"
+Options:
+  - Wix
+  - Framer
+  - HubSpot CMS
+  - Custom / static HTML (or other)
+MultiSelect: false
+```
+
+The agent supports any builder where a `<script>` tag can be injected into `<head>`. If the user picks "Custom / static HTML (or other)" and their stack isn't listed, ask: "Which platform? I'll adapt the vanilla template to it." Free-text the answer and save to env as `LP_DEFAULT_STACK`.
+
+**Q3 — Which analytics platform?**
 ```
 Header: "Analytics"
 Options:
-  - PostHog (Recommended) — Unlocks A/B engine, funnel events, replays
-  - GA4 only              — Forward events via GTM, no PostHog
-  - Both                  — Run both; PostHog for experiments, GA4 for reporting
-  - Other / decide later  — Skip for now
+  - PostHog (Recommended)  — Unlocks A/B engine, funnel events, replays
+  - GA4 only               — Forward events via GTM, no PostHog
+  - Both                   — PostHog for experiments, GA4 for reporting
+  - Other / decide later   — Skip for now
 MultiSelect: false
 ```
 
-**Q3 — Heatmaps / session replay?**
+**Q4 — Heatmaps / session replay?**
 ```
 Header: "Heatmaps"
 Options:
@@ -65,35 +114,55 @@ Options:
 MultiSelect: false
 ```
 
-**Q4 — Form tool?**
+**Q5 — Form tool? (only ask if Q1 goal involves a form)**
+
+Skip this question entirely if the goal is ecommerce-purchase, app-install, or any other non-form goal.
+
+If the goal is lead form / signup / booking / content unlock / newsletter / waitlist:
+
 ```
-Header: "Forms"
+Header: "Form tool"
 Options:
-  - JotForm        — Embedded JotForm (iframe or JS)
-  - Native HTML    — Build the form inline on the LP
-  - Typeform       — Embedded Typeform
-  - Other          — Will specify per project
+  - JotForm
+  - Typeform / Tally / Fillout (hosted)
+  - Native HTML form
+  - CRM-native (HubSpot / ActiveCampaign / Mailchimp / etc.)
 MultiSelect: false
 ```
 
-**Q5 — Communication channel?**
+If none of the above fit, ask follow-up:
+
+```
+Question: "Which form tool?"
+Header: "Other form"
+Options:
+  - WordPress plugin (Gravity Forms, WPForms, etc.)
+  - Shopify / Webflow / Squarespace native form block
+  - Something else (you'll name it)
+  - Not using a form yet — varies per project
+MultiSelect: false
+```
+
+Record the answer as `LP_FORM_TOOL` (lowercased keyword). Drives which engagement-event wiring the agent loads per project.
+
+**Q6 — Communication channel?**
 ```
 Header: "Comms"
 Options:
-  - CLI only (Recommended)   — Run sweeps and reports inside Claude Code
-  - Slack                    — Weekly sweep posts to Slack
-  - Email                    — Weekly digest by email
-  - Multiple                 — Configure more than one
+  - CLI only (Recommended) — Run sweeps and reports inside Claude Code
+  - Slack                  — Weekly sweep posts to Slack
+  - Email                  — Weekly digest by email
+  - Multiple               — Configure more than one
 MultiSelect: false
 ```
 
-**Q6 — Compliance constraints?**
+**Q7 — Compliance constraints?**
 ```
 Header: "Compliance"
 Options:
-  - Heavily regulated     — Specific industry rules (healthcare, finance, legal, energy rebates, etc.)
-  - Some constraints      — General brand voice / banned phrases / claims rules
-  - None / standard       — No special constraints beyond best practices
+  - Heavily regulated  — Industry rules (healthcare, finance, legal, energy rebates, etc.)
+  - Some constraints   — Brand voice / banned phrases / claims rules
+  - None / standard    — No special constraints beyond best practices
 MultiSelect: false
 ```
 
@@ -127,12 +196,18 @@ Ask each with `AskUserQuestion` (single option "Paste it" + the natural "Other" 
 
 Record as `CLARITY_PROJECT_ID=` and (if provided) `CLARITY_API_TOKEN=`.
 
-### If JotForm was selected (Q4)
+### Form-tool-specific keys (only if Q5 was asked and answered)
 
-> JotForm API key (optional — needed for `analyze_submissions`):
-> Open https://www.jotform.com/myaccount/api → Create new key → read+write. Paste here.
+The questionnaire selected a form tool. Some tools need an API key for `analyze_submissions`-style introspection; many don't. Collect only what's needed:
 
-Record as `JOTFORM_API_KEY=`.
+- **JotForm** — API key at https://www.jotform.com/myaccount/api (read+write). Record as `JOTFORM_API_KEY=`.
+- **Typeform** — Personal token at https://admin.typeform.com/account#/section/tokens (read scope). Record as `TYPEFORM_PERSONAL_TOKEN=`.
+- **Tally** — API key at https://tally.so/settings/api (read scope). Record as `TALLY_API_KEY=`.
+- **Fillout** — API key at https://www.fillout.com/dashboard (Settings → Developers). Record as `FILLOUT_API_KEY=`.
+- **HubSpot** — Private app token at https://app.hubspot.com/private-apps. Record as `HUBSPOT_PRIVATE_APP_TOKEN=`.
+- **Native HTML / WordPress plugin / platform-native form block / "something else"** — no API key needed; skip.
+
+Only ask for the key matching the tool the user picked. Don't prompt for all of them.
 
 ### If Slack was selected (Q5)
 
@@ -155,7 +230,10 @@ Build the env content from the answers above. Write it via Bash:
 mkdir -p ~/.landing-page-agent
 cat > ~/.landing-page-agent/.env <<'ENV'
 # Landing Page Agent — generated by /landing-page-agent:setup on {today}
-LP_DEFAULT_STACK={stack}
+LP_DEFAULT_GOAL={goal}                # lead-form | purchase | signup | booking | content | newsletter | app-install | other
+LP_DEFAULT_CONVERSION_EVENT={event}   # e.g. lead_form_submitted, order_completed, booking_completed
+LP_DEFAULT_STACK={stack}              # shopify | wordpress | webflow | squarespace | wix | framer | hubspot-cms | custom | <other free-text>
+LP_FORM_TOOL={form_tool_or_blank}     # only set if the goal involves a form
 LP_COMMS={comms}
 
 # PostHog
@@ -167,8 +245,12 @@ POSTHOG_PROJECT_ID={id}
 CLARITY_PROJECT_ID={id}
 CLARITY_API_TOKEN={token}
 
-# JotForm (optional)
+# Form-tool API (optional — only one of these, matching LP_FORM_TOOL)
 JOTFORM_API_KEY={key}
+TYPEFORM_PERSONAL_TOKEN={token}
+TALLY_API_KEY={key}
+FILLOUT_API_KEY={key}
+HUBSPOT_PRIVATE_APP_TOKEN={token}
 
 # Slack (optional)
 SLACK_WEBHOOK_URL={url}
@@ -176,7 +258,7 @@ ENV
 chmod 600 ~/.landing-page-agent/.env
 ```
 
-Only include lines for platforms the user actually provided. Don't write blank env vars — keep the file tight.
+**Only include lines for platforms / fields the user actually provided.** Don't write blank env vars — keep the file tight. For example, if the goal is ecommerce-purchase, omit `LP_FORM_TOOL` and all form-tool API keys entirely.
 
 ## Step 5 — Scaffold the workspace
 

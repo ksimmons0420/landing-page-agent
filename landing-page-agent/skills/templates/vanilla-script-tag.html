@@ -1,0 +1,137 @@
+<!--
+  ============================================================================
+  Landing Page Agent — universal <script> analytics block
+  ============================================================================
+  Builder-agnostic. Works anywhere a <script> tag in <head> works:
+  WordPress, Webflow, Squarespace, Wix, Framer, HubSpot CMS, plain HTML, etc.
+
+  HOW TO USE
+  ----------
+  Substitute these placeholders (the agent does this automatically when you
+  run /landing-page-agent:new-project):
+
+    {{POSTHOG_PROJECT_TOKEN}}  — your PostHog project token (phc_...)
+    {{POSTHOG_API_HOST}}       — usually https://us.i.posthog.com
+    {{PROJECT_SLUG}}           — kebab-case project name (used in sessionStorage key)
+    {{EXPERIMENT_FLAG_KEY}}    — A/B flag key (e.g. acme-lp-test); leave blank for no test
+    {{CONVERSION_EVENT_NAME}}  — primary success event (lead_form_submitted | order_completed |
+                                 booking_completed | signup_completed | etc.)
+    {{LP_PATH_PATTERN}}        — only fire on URLs matching this. Examples:
+                                   "/lp/"      (substring match — fires on any URL containing /lp/)
+                                   "/landing/" (any URL containing /landing/)
+                                   ""          (empty = fire on every page)
+
+  WHERE TO PASTE
+  --------------
+  - WordPress     → Appearance → Theme File Editor → header.php (before </head>)
+                    Or use a plugin like "Insert Headers and Footers".
+  - Webflow       → Project Settings → Custom Code → Head Code
+  - Squarespace   → Settings → Advanced → Code Injection → Header
+  - Wix           → Settings → Custom Code → "Add Custom Code" → Head
+  - Framer        → Site Settings → Custom Code → Start of <head>
+  - HubSpot CMS   → Settings → Website → Pages → Site header HTML
+  - Plain HTML    → Paste directly into <head> of your page(s)
+
+  HOW TO VERIFY
+  -------------
+  Load the page in incognito DevTools console:
+    1. Type `posthog` → returns an object (not undefined)
+    2. Reload the page → see `lp_pageview` event in PostHog within 30s
+    3. Click a CTA → see `lp_cta_clicked`
+    4. Complete a conversion → see the {{CONVERSION_EVENT_NAME}} event with
+       origin_path + variant + utm_* properties stamped on
+  ============================================================================
+-->
+<script>
+!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+
+(function() {
+  /* Only fire on URLs matching the path pattern (empty pattern = everywhere) */
+  var PATH_PATTERN = '{{LP_PATH_PATTERN}}';
+  if (PATH_PATTERN && window.location.pathname.indexOf(PATH_PATTERN) === -1) return;
+
+  var STORAGE_KEY    = '{{PROJECT_SLUG}}_lp_session';
+  var UTM_KEYS       = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid','msclkid','ttclid'];
+  var FLAG_KEY       = '{{EXPERIMENT_FLAG_KEY}}';
+  var CONV_EVENT     = '{{CONVERSION_EVENT_NAME}}' || 'lp_conversion';
+
+  posthog.init('{{POSTHOG_PROJECT_TOKEN}}', { api_host: '{{POSTHOG_API_HOST}}' });
+
+  /* --- 1. UTM capture + sessionStorage persistence --- */
+  var params = new URLSearchParams(window.location.search);
+  var captured = {};
+  UTM_KEYS.forEach(function(k) { if (params.get(k)) captured[k] = params.get(k); });
+  if (Object.keys(captured).length > 0) {
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(captured)); } catch (e) {}
+  }
+  function getStored() {
+    try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) { return {}; }
+  }
+  function mergeStored(extra) {
+    var cur = getStored();
+    Object.keys(extra).forEach(function(k) { if (extra[k] != null && extra[k] !== '') cur[k] = extra[k]; });
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(cur)); } catch (e) {}
+  }
+
+  /* --- 2. Persist origin page path for cross-page attribution --- */
+  mergeStored({ origin_path: window.location.pathname });
+
+  /* --- 3. Variant assignment (if a flag key is configured) --- */
+  if (FLAG_KEY) {
+    posthog.onFeatureFlags(function() {
+      var variant = posthog.getFeatureFlag(FLAG_KEY);
+      if (variant) {
+        mergeStored({ variant: variant });
+        posthog.capture('experiment_assigned', { flag: FLAG_KEY, variant: variant });
+      }
+    });
+  }
+
+  /* --- 4. Pageview --- */
+  posthog.capture('lp_pageview', Object.assign({ page_path: window.location.pathname }, getStored()));
+
+  /* --- 5. CTA clicks: any element with [data-lp-cta] or .lp-cta or role=button + href --- */
+  document.addEventListener('click', function(e) {
+    var el = e.target.closest('[data-lp-cta], .lp-cta, a[role="button"], button[type="submit"]');
+    if (!el) return;
+    var props = Object.assign({
+      cta_text: (el.innerText || el.value || '').trim().slice(0, 80),
+      cta_href: el.getAttribute('href') || null,
+      page_path: window.location.pathname
+    }, getStored());
+    posthog.capture('lp_cta_clicked', props);
+  }, true);
+
+  /* --- 6. Form engagement (only fires if a <form> is present on the page) --- */
+  var forms = document.querySelectorAll('form');
+  forms.forEach(function(f) {
+    var engaged = false;
+    f.addEventListener('focusin', function() {
+      if (!engaged) {
+        engaged = true;
+        posthog.capture('lp_form_engaged', Object.assign({ form_id: f.id || null }, getStored()));
+      }
+    });
+    f.addEventListener('submit', function() {
+      posthog.capture('lp_form_submit_attempted', Object.assign({ form_id: f.id || null }, getStored()));
+    });
+  });
+
+  /* --- 7. Primary conversion (called by the form host's success callback, or fired
+            manually by the success page).  Dedupe once per session. --- */
+  window.lpFireConversion = function(extraProps) {
+    if (sessionStorage.getItem('__lp_conv_fired')) return;
+    try { sessionStorage.setItem('__lp_conv_fired', '1'); } catch (e) {}
+    posthog.capture(CONV_EVENT, Object.assign({ page_path: window.location.pathname }, getStored(), extraProps || {}));
+  };
+
+  /* If this IS the success / thank-you page, auto-fire conversion.
+     Heuristic: URL contains "thank", "success", "confirm", "complete", or "thank-you".
+     For tighter control, the user can call lpFireConversion() manually from their
+     success callback (form postMessage, Shopify order page, etc.) */
+  var p = window.location.pathname.toLowerCase();
+  if (/thank|success|confirm|complete/.test(p)) {
+    window.lpFireConversion();
+  }
+})();
+</script>

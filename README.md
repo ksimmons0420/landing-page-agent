@@ -2,9 +2,15 @@
 
 A standalone landing-page CRO agent for Claude Code. No Agency OS dependency — runs as a self-contained plugin.
 
-**What it does:** runs a continuous CRO program on every landing page you point it at. Six-event funnel instrumentation, conversion attribution bridge (closes the ~50% unattributable gap), ICE-ranked experiment backlog, weekly never-go-dark sweep, and an A/B engine on PostHog.
+**Builder-agnostic. Goal-agnostic. Form-agnostic.**
 
-**Status:** v0.1.0 — MVP. The `setup` command is the focus of this release; `new-project` and `sweep` ship as functional but lightly-finished. Stack support: Shopify is fully wired today; Webflow / WordPress / vanilla HTML arrive in v0.2.0.
+- **Builders:** Shopify, WordPress, Webflow, Squarespace, Wix, Framer, HubSpot CMS, plain HTML, anything else where you can paste a `<script>` tag.
+- **Goals:** lead form fills, ecommerce purchases, account signups, calendar bookings, content unlocks, newsletter signups, app installs, or anything custom you name.
+- **Form tools:** JotForm, Typeform, Tally, Fillout, HubSpot, Gravity Forms, WPForms, ConvertKit, Mailchimp embed, native HTML — or no form at all.
+
+**What it does:** runs a continuous CRO program on every landing page you point it at. Funnel instrumentation (`lp_pageview` → `lp_cta_clicked` → `lp_form_engaged` → `<your conversion event>`), conversion attribution bridge (closes the ~50% unattributable gap), ICE-ranked experiment backlog, weekly never-go-dark sweep, and an A/B engine on PostHog.
+
+**Status:** v0.1.0 — MVP. The `setup` command is the focus of this release; `new-project` and `sweep` ship as functional but lightly-finished. Two deploy templates ship: the universal vanilla `<script>` block (default) and a Shopify Liquid variant.
 
 ## Install
 

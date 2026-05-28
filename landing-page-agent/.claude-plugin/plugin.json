@@ -1,6 +1,6 @@
 {
   "name": "landing-page-agent",
-  "description": "Standalone landing-page CRO agent. Self-contained — no Agency OS dependency. Runs a continuous CRO program: onboarding questionnaire, instrumented funnel, conversion attribution bridge, ICE-ranked experiment backlog, weekly sweep.",
+  "description": "Standalone landing-page CRO agent. Self-contained — no Agency OS dependency. Builder-agnostic (Shopify, WordPress, Webflow, Squarespace, Wix, Framer, HubSpot CMS, custom HTML), goal-agnostic (lead forms, ecommerce, signups, bookings, content unlocks, app installs), form-agnostic. Runs a continuous CRO program: onboarding questionnaire, instrumented funnel, conversion attribution bridge, ICE-ranked experiment backlog, weekly sweep.",
   "version": "0.1.0",
   "author": "Scale House Media"
 }
