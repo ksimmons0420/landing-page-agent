@@ -1,0 +1,156 @@
+{% comment %}
+  ============================================================================
+  Universal LP analytics block — drop into theme.liquid before </head>
+  ============================================================================
+  Replaces all per-page PostHog/UTM code. Fires on every /pages/* visit.
+
+  HOW TO USE
+  ----------
+  1. Replace {{POSTHOG_TOKEN}} with the client's PostHog project token
+  2. Replace {{CLIENT_SLUG}} with the client's slug (used for sessionStorage key)
+  3. Replace {{FORM_PAGE_PATH}} with the path of the form page (e.g. /pages/schedule-estimate)
+  4. Replace {{JOTFORM_ID}} with the JotForm form ID (e.g. 251287169044157)
+  4b. Replace {{EXPERIMENT_FLAG_KEY}} with the live A/B-test flag key (e.g. lp-bundled-test),
+      or leave the placeholder as-is if the client has no live test
+  5. Optionally edit FORWARD_PATHS to match the client's CTA destination pages
+  6. Paste this entire block into theme.liquid BEFORE </head>
+  7. Save the theme (confirm you're editing the LIVE theme, not a draft)
+  8. Verify via incognito browser DevTools console: type `posthog` → object returned
+
+  WHAT IT DOES
+  ------------
+  - PostHog idempotent init (safe if any page also includes its own init)
+  - Captures UTMs/fbclid/gclid from URL, persists to sessionStorage
+  - Forwards UTMs to internal CTA destinations on click
+  - Fires lp_pageview, lp_cta_clicked, lead_form_submitted (on thank-you page)
+  - Carries origin LP path + A/B-test variant to the shared thank-you page, so every
+    conversion is attributable to its source page AND test variant (not just when the
+    flag happens to reload there)
+  - De-dupes the conversion: fires once per session, not on every thank-you refresh
+  - On /pages/{FORM_PAGE_PATH}: fires lp_form_engaged after 5s,
+    injects UTMs (+ origin_path, lp_variant) into JotForm hidden inputs, listens for submit
+{% endcomment %}
+{% if request.path contains '/pages/' %}
+<script>
+!function(t,e){var o,n,p,r;e.__SV||(window.posthog=e,e._i=[],e.init=function(i,s,a){function g(t,e){var o=e.split(".");2==o.length&&(t=t[o[0]],e=o[1]),t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}}(p=t.createElement("script")).type="text/javascript",p.crossOrigin="anonymous",p.async=!0,p.src=s.api_host.replace(".i.posthog.com","-assets.i.posthog.com")+"/static/array.js",(r=t.getElementsByTagName("script")[0]).parentNode.insertBefore(p,r);var u=e;for(void 0!==a?u=e[a]=[]:a="posthog",u.people=u.people||[],u.toString=function(t){var e="posthog";return"posthog"!==a&&(e+="."+a),t||(e+=" (stub)"),e},u.people.toString=function(){return u.toString(1)+".people (stub)"},o="init capture register register_once register_for_session unregister unregister_for_session getFeatureFlag getFeatureFlagPayload isFeatureEnabled reloadFeatureFlags updateEarlyAccessFeatureEnrollment getEarlyAccessFeatures on onFeatureFlags onSessionId getSurveys getActiveMatchingSurveys renderSurvey canRenderSurvey getNextSurveyStep identify setPersonProperties group resetGroups setPersonPropertiesForFlags resetPersonPropertiesForFlags setGroupPropertiesForFlags resetGroupPropertiesForFlags reset opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing debug".split(" "),n=0;n<o.length;n++)g(u,o[n]);e._i.push([i,s,a])},e.__SV=1)}(document,window.posthog||[]);
+posthog.init('{{POSTHOG_TOKEN}}', { api_host: 'https://us.i.posthog.com' });
+
+(function() {
+  var STORAGE_KEY = '{{CLIENT_SLUG}}_utm';
+  var FORM_PAGE = '{{FORM_PAGE_PATH}}';
+  var THANK_YOU_PAGE = '/pages/thank-you';
+  var UTM_KEYS = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term','fbclid','gclid'];
+  var FORWARD_PATHS = [FORM_PAGE, '/pages/contact-us', '/pages/get-quote', THANK_YOU_PAGE];
+  var JOTFORM_ID = '{{JOTFORM_ID}}';
+  var EXPERIMENT_FLAG = '{{EXPERIMENT_FLAG_KEY}}';
+
+  /* 1. Capture URL params, persist to sessionStorage */
+  var params = new URLSearchParams(window.location.search);
+  var captured = {};
+  UTM_KEYS.forEach(function(k) { if (params.get(k)) captured[k] = params.get(k); });
+  if (Object.keys(captured).length > 0) {
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(captured)); } catch (e) {}
+  }
+  function getStoredUtms() {
+    try { return JSON.parse(sessionStorage.getItem(STORAGE_KEY) || '{}'); } catch (e) { return {}; }
+  }
+  function mergeStored(extra) {
+    var cur = getStoredUtms();
+    Object.keys(extra).forEach(function(k) { if (extra[k] != null && extra[k] !== '') cur[k] = extra[k]; });
+    try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(cur)); } catch (e) {}
+  }
+
+  /* 1b. Persist origin LP path + A/B variant so the shared thank-you page can attribute the conversion */
+  if (location.pathname.indexOf(THANK_YOU_PAGE) !== 0) {
+    mergeStored({ origin_path: location.pathname });
+  }
+  if (EXPERIMENT_FLAG.indexOf('{{') !== 0) {
+    posthog.onFeatureFlags(function() {
+      var v = posthog.getFeatureFlag(EXPERIMENT_FLAG);
+      if (v) mergeStored({ lp_experiment: EXPERIMENT_FLAG, lp_variant: v });
+    });
+  }
+
+  /* 2. lp_pageview with UTMs */
+  posthog.capture('lp_pageview', Object.assign({ page: location.pathname }, getStoredUtms()));
+
+  /* 3. Forward UTMs to internal CTA links + fire lp_cta_clicked */
+  document.addEventListener('click', function(e) {
+    var link = e.target.closest('a');
+    if (!link || !link.href) return;
+    var url;
+    try { url = new URL(link.href, location.origin); } catch (err) { return; }
+    if (url.origin !== location.origin) return;
+    if (!FORWARD_PATHS.some(function(p) { return url.pathname.startsWith(p); })) return;
+    var stored = getStoredUtms();
+    UTM_KEYS.forEach(function(k) {
+      if (stored[k] && !url.searchParams.get(k)) url.searchParams.set(k, stored[k]);
+    });
+    link.href = url.toString();
+    posthog.capture('lp_cta_clicked', {
+      page: location.pathname,
+      cta_text: (link.textContent || '').trim().slice(0, 80),
+      destination: url.pathname,
+      utm_campaign: stored.utm_campaign || null,
+      utm_content: stored.utm_content || null
+    });
+  });
+
+  /* 4. Thank-you conversion — fires once per session, carries origin_path + lp_variant from storage */
+  if (location.pathname.indexOf(THANK_YOU_PAGE) === 0) {
+    var conv = getStoredUtms();
+    if (!conv.__conv_fired) {
+      posthog.capture('lead_form_submitted', Object.assign({ source: 'thank_you_page' }, conv));
+      if (window.fbq) try { fbq('track', 'Lead'); } catch (e) {}
+      conv.__conv_fired = true;
+      try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(conv)); } catch (e) {}
+    }
+  }
+
+  /* 5. Form page tracking (page-body scripts get stripped by Shopify — must live here) */
+  if (location.pathname.indexOf(FORM_PAGE) === 0) {
+    var stored = getStoredUtms();
+    setTimeout(function() {
+      posthog.capture('lp_form_engaged', Object.assign({ page: FORM_PAGE }, stored));
+    }, 5000);
+
+    var POLL_MS = 500, MAX_TRIES = 30, tries = 0;
+    var submitFired = false;
+    var injectIntoJotForm = function() {
+      tries += 1;
+      var form = document.querySelector('form[id^="' + JOTFORM_ID + '"], form[name="' + JOTFORM_ID + '"]')
+              || document.querySelector('form[action*="jotform"]');
+      if (!form && tries < MAX_TRIES) return setTimeout(injectIntoJotForm, POLL_MS);
+      if (!form) return;
+
+      Object.keys(stored).forEach(function(k) {
+        var existing = form.querySelector('input[name="' + k + '"]');
+        if (existing) { existing.value = stored[k]; return; }
+        var inp = document.createElement('input');
+        inp.type = 'hidden'; inp.name = k; inp.value = stored[k];
+        form.appendChild(inp);
+      });
+      if (document.referrer) {
+        var ref = form.querySelector('input[name="landing_referrer"]');
+        if (!ref) {
+          ref = document.createElement('input'); ref.type='hidden'; ref.name='landing_referrer';
+          form.appendChild(ref);
+        }
+        ref.value = document.referrer;
+      }
+
+      form.addEventListener('submit', function() {
+        submitFired = true;
+        posthog.capture('lp_form_submit_attempted', Object.assign({ page: FORM_PAGE, source: 'jsform_submit' }, stored));
+      }, true);
+    };
+    setTimeout(injectIntoJotForm, POLL_MS);
+
+    window.addEventListener('beforeunload', function() {
+      if (submitFired) return;
+      posthog.capture('lp_form_submit_attempted', Object.assign({ page: FORM_PAGE, source: 'beforeunload' }, stored));
+    });
+  }
+})();
+</script>
+{% endif %}

@@ -1,0 +1,6 @@
+{
+  "name": "landing-page-agent",
+  "description": "Standalone landing-page CRO agent. Self-contained — no Agency OS dependency. Runs a continuous CRO program: onboarding questionnaire, instrumented funnel, conversion attribution bridge, ICE-ranked experiment backlog, weekly sweep.",
+  "version": "0.1.0",
+  "author": "Scale House Media"
+}
