@@ -5,17 +5,17 @@
     "url": "https://scalehousemedia.com"
   },
   "metadata": {
-    "description": "Standalone landing-page CRO agent for Claude Code. Builder-agnostic (Shopify, WordPress, Webflow, Squarespace, Wix, Framer, HubSpot CMS, custom HTML). Goal-agnostic (lead forms, ecommerce, signups, bookings, content unlocks, app installs). Form-agnostic (JotForm, Typeform, Tally, Fillout, HubSpot, Gravity Forms, native HTML, or no form). Instrumented funnel, conversion attribution bridge, ICE-ranked experiment backlog, weekly never-go-dark sweep.",
-    "version": "0.1.0"
+    "description": "Standalone landing-page CRO agent for Claude Code. Builder-agnostic (Shopify, WordPress, Webflow, Squarespace, Wix, Framer, HubSpot CMS, custom HTML). Goal-agnostic (lead forms, ecommerce, signups, bookings, content unlocks, app installs). Form-agnostic. Instrumented funnel with 6 canonical events + conversion attribution bridge, ICE-ranked experiment backlog, weekly never-go-dark sweep, LP review framework, content virality discipline, brand palette audit.",
+    "version": "0.2.0"
   },
   "plugins": [
     {
       "name": "landing-page-agent",
       "source": "./landing-page-agent",
-      "description": "Standalone landing-page CRO agent — onboarding questionnaire, multi-builder / multi-goal / multi-form-tool support, PostHog A/B engine, continuous experimentation.",
-      "version": "0.1.0",
+      "description": "Standalone landing-page CRO agent — onboarding questionnaire, multi-builder / multi-goal / multi-form-tool support, PostHog A/B engine, continuous experimentation, LP review framework, content virality, brand palette audit.",
+      "version": "0.2.0",
       "category": "growth",
-      "tags": ["landing-pages", "cro", "ab-testing", "posthog", "experiments"]
+      "tags": ["landing-pages", "cro", "ab-testing", "posthog", "experiments", "lp-review", "content-virality"]
     }
   ]
 }

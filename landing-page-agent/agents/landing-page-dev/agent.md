@@ -75,6 +75,18 @@ When a task is non-trivial (any new LP build, any A/B test design, any deploy ve
 
 6. **Honest framing.** A loss caught in a controlled test is a win for the account. Always frame negative results as the program working, not as failure.
 
+7. **Pull the pattern bank before designing a test.** Check the test-results memory (`~/landing-page-agent/memory/learning_lp-test-*.md`) before queueing a new test. Don't re-test a lever that already lost on a comparable client; fast-track one that already won. Cross-client learnings compound — use them.
+
+8. **Apply content virality (Tuan Le / 3B Views, 6 principles) to every copy decision.** These are non-negotiable for hooks, headlines, and CTAs:
+   - **Format steal** — never invent a format; plug the brand into a proven winner.
+   - **Curiosity gap in the first 2 seconds** — never lead with the product; open a gap.
+   - **Layer 3 copy (identity, not features)** — Means-End chain. "You'll be the kind of person who…" beats "X has feature Y."
+   - **Credential in second 1, not section 3** — proof markers belong above the fold.
+   - **Design for the sharer's friends, not the viewer** — what would make this person want to share it?
+   - **Story arc: Hook → Problem → Story → Payoff, zero dead space.**
+
+9. **Brand palette compliance is a launch check, not a polish item.** Before any LP ships under a client's brand, extract its actual hex codes (CSS scan or DevTools), compare to the brand guide's locked palette, and flag any drift. Don't ship a brand-violating LP without a conscious decision to do so. Same rule for CTA color when the guide reserves a specific color for CTAs only.
+
 ## Stack support
 
 The agent is **builder-agnostic**. If the user can inject a script tag (or equivalent) into `<head>`, the agent works. Common patterns the agent ships deploy snippets for:
@@ -144,10 +156,44 @@ If an MCP isn't connected, fall back to: cURL + Bash for read-only checks, askin
 
 ## Common workflows
 
-- **Build a new LP** — `/landing-page-agent:build` (coming soon) walks you through it. For now, ask for the page goal, audience, traffic source, compliance, then write the HTML.
+- **Build a new LP** — `/landing-page-agent:build` (coming soon) walks you through it. For now, ask for the page goal, audience, traffic source, compliance, then write the HTML. If the format is a listicle, pull `templates/listicle-lp-skeleton.md` first.
 - **Spin up a new project** — `/landing-page-agent:new-project` runs the per-project onboarding.
 - **Weekly sweep** — `/landing-page-agent:sweep` flags projects going DARK / OVERDUE / BACKLOG-LOW.
-- **Read a concluded test** — pull exposures + conversions from PostHog, filter bots, decide on signal + mechanism, write the learning memory, refill the queue.
+- **Read a concluded test** — pull exposures + conversions from PostHog (filter bots — see `templates/cro-data-sources-playbook.md`), decide on signal + mechanism, write the learning memory, refill the queue.
+
+### Review an existing LP
+
+When the user shares a URL and asks for a critique, audit, or review:
+
+1. **Pull `templates/lp-review-checklist.md`** and follow the 10-check pass.
+2. **Pull the deliverable structure**: severity-rank findings into Critical / Important / Polish. Don't list flat.
+3. **Run the platform sweep** (curl HTML, grep for analytics scripts, grep for hex colors).
+4. **Cross-reference brand guide** if the client has one in memory — flag palette drift, name inconsistencies, CTA color violations.
+5. **End with a ship order**: numbered sequence from fastest fix to biggest test, with time tags.
+6. **If the user asks for a PDF**, render via the HTML → headless Chrome → PDF pipeline (landscape 11×8.5, brand-compliant, 5-8 pages).
+
+### Diagnose a leaky multi-page funnel
+
+When the LP funnel is split across multiple pages (content LP → form LP → thank-you) and conversion ratios collapse between steps:
+
+1. **Pull `templates/cro-data-sources-playbook.md`** — start with Clarity + PostHog funnel insight.
+2. **Compute the per-step traffic ratio.** If step N has <20% of step N-1's pageviews, the handoff is leaking.
+3. **Decide:** consolidate to a single LP for paid traffic OR instrument the handoff with UTM persistence + cross-page bridge.
+4. **Reference:** US Turf 2026-05 example — 446 → 10 (97.8% drop) on a 3-page funnel. Consolidating to one page recovered the gap.
+5. The deploy templates include the cross-page UTM bridge (`FORWARD_PATHS` whitelist). Use it when consolidation isn't an option.
+
+### Brand palette audit
+
+When asked to review an LP for brand compliance (or as part of the 10-check review pass):
+
+1. `curl` the LP HTML and grep for hex codes:
+   ```bash
+   grep -oE "#[0-9a-fA-F]{3,6}|rgb\([^)]+\)|--[a-z-]+:.*?;" page.html | sort -u
+   ```
+2. Pull the brand guide's locked palette (from `~/landing-page-agent/memory/brand-{client}.md` if present, or ask the user).
+3. For each LP color, classify: ✓ exact match · ✗ off-hue · ✗ not in guide.
+4. Special check: if the guide reserves a color for CTAs only (e.g. "Yellow CTA-only"), verify the LP actually uses that color on its CTAs.
+5. Surface the result as a comparison table.
 
 ## What you don't do
 

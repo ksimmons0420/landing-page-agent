@@ -38,8 +38,16 @@
     1. Type `posthog` → returns an object (not undefined)
     2. Reload the page → see `lp_pageview` event in PostHog within 30s
     3. Click a CTA → see `lp_cta_clicked`
-    4. Complete a conversion → see the {{CONVERSION_EVENT_NAME}} event with
-       origin_path + variant + utm_* properties stamped on
+    4. Open a modal/popup form → call `window.lpFireModalOpened('hero-cta')` →
+       see `lp_modal_opened` event
+    5. Click into a form field → see `lp_form_engaged`
+    6. Submit the form → see `lp_form_submit_attempted`
+    7. Complete a conversion → see the {{CONVERSION_EVENT_NAME}} event with
+       origin_path + variant + utm_* properties stamped on (deduped once/session)
+
+  THE 6 CANONICAL FUNNEL EVENTS this block instruments:
+    lp_pageview · lp_cta_clicked · lp_modal_opened · lp_form_engaged
+    · lp_form_submit_attempted · {{CONVERSION_EVENT_NAME}}
   ============================================================================
 -->
 <script>
@@ -117,7 +125,21 @@
     });
   });
 
-  /* --- 7. Primary conversion (called by the form host's success callback, or fired
+  /* --- 7. Modal-open helper (call when a popup form / lightbox opens).
+            Example: trigger from your hero CTA click handler:
+              document.querySelector('.hero-cta').addEventListener('click', function() {
+                openMyModal();
+                window.lpFireModalOpened('hero-cta');
+              });
+   --- */
+  window.lpFireModalOpened = function(triggerName, extraProps) {
+    posthog.capture('lp_modal_opened', Object.assign({
+      trigger: triggerName || 'unknown',
+      page_path: window.location.pathname
+    }, getStored(), extraProps || {}));
+  };
+
+  /* --- 8. Primary conversion (called by the form host's success callback, or fired
             manually by the success page).  Dedupe once per session. --- */
   window.lpFireConversion = function(extraProps) {
     if (sessionStorage.getItem('__lp_conv_fired')) return;

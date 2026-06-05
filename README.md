@@ -10,7 +10,7 @@ A standalone landing-page CRO agent for Claude Code. No Agency OS dependency —
 
 **What it does:** runs a continuous CRO program on every landing page you point it at. Funnel instrumentation (`lp_pageview` → `lp_cta_clicked` → `lp_form_engaged` → `<your conversion event>`), conversion attribution bridge (closes the ~50% unattributable gap), ICE-ranked experiment backlog, weekly never-go-dark sweep, and an A/B engine on PostHog.
 
-**Status:** v0.1.0 — MVP. The `setup` command is the focus of this release; `new-project` and `sweep` ship as functional but lightly-finished. Two deploy templates ship: the universal vanilla `<script>` block (default) and a Shopify Liquid variant.
+**Status:** v0.2.0 — feature release. The agent now ships a structured LP review framework, content-virality discipline (Tuan Le 6 principles), brand-palette audit workflow, and three new operator-reference templates (`lp-review-checklist`, `cro-data-sources-playbook`, `listicle-lp-skeleton`). The vanilla deploy template now fires all 6 canonical funnel events (`lp_pageview` · `lp_cta_clicked` · `lp_modal_opened` · `lp_form_engaged` · `lp_form_submit_attempted` · your conversion event) with the conversion attribution bridge built in. See `CHANGELOG.md` for the full v0.2.0 diff.
 
 ## Install
 
