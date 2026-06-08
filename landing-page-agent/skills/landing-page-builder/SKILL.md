@@ -81,6 +81,17 @@ Architecture converts traffic; **copy** converts attention. Apply these before w
 
 Use CSS custom properties (`var(--green)`) for elements that stay inside `.{brand}-lp`. **Use literal hex (`#4FAE45`) for any element that gets JS-reparented to `<body>`** (sticky bars, modal popups). Custom properties don't cascade once an element leaves its declaring scope.
 
+### Viewport guard (paste-blocks have no `<head>` of their own)
+
+A paste-block inherits the host page's `<head>` — fine for charset, but **a standalone preview, or any host theme that omits it, has no `<meta name="viewport">`**, so phones render the page at ~980px desktop width and the mobile breakpoints never fire. The visitor sees the desktop layout zoomed out. (Confirmed on Strider 2026-06: every page looked desktop on a real phone — despite correct mobile CSS — until this was added.)
+
+**Always include a self-healing viewport guard** at the top of the block. It's idempotent — injects into `<head>` only if missing, so it's a no-op on hosts that already have one (no duplicate):
+```html
+<script>/* viewport guard: ensure mobile width even if the host/preview lacks one */
+(function(){try{if(!document.querySelector('meta[name="viewport"]')){var m=document.createElement('meta');m.name='viewport';m.setAttribute('content','width=device-width, initial-scale=1, viewport-fit=cover');(document.head||document.documentElement).appendChild(m);}}catch(e){}})();
+</script>
+```
+
 ### Section library (in conversion-optimized order)
 
 | # | Section | Pattern |
@@ -441,7 +452,9 @@ To let the client — or you, on a phone — review a self-contained LP before i
 python3 -m http.server 8755 --directory {lp-dir} &
 cloudflared tunnel --url http://127.0.0.1:8755   # prints a temp https://*.trycloudflare.com URL
 ```
-Ephemeral (dies on restart) and review-only — **not** a real deploy. Ideal for "approve these before I host them." For a programmatic render/QA check, drive it with Playwright at a phone viewport (390×844) and assert icon/encoding state via `getComputedStyle` + `getBoundingClientRect`.
+Ephemeral (dies on restart) and review-only — **not** a real deploy. Ideal for "approve these before I host them."
+
+> ⚠️ **Don't force the viewport when testing mobile.** Playwright's `setViewportSize({width:390})` (or `browser_resize`) overrides the layout viewport and renders the mobile layout *even when the page is missing its viewport meta* — a false positive that hides the exact bug a real phone shows. To certify responsiveness, either emulate a real device (`isMobile:true`, which honors the meta) or assert the meta resolves in the live DOM (`document.querySelector('meta[name=viewport]')`) **and** confirm on a real device. Forced-viewport screenshots are fine for checking a CSS change (icon size, rank alignment) — not for certifying that the page is responsive. Source of truth = real device. (Strider 2026-06: a forced-390 screenshot reported "looks great on mobile" while a real phone showed full desktop.)
 
 ### Verification curl
 

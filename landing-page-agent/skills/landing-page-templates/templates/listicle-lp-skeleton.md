@@ -37,6 +37,8 @@ Cons (1-2)     — bullet (yes, even on your own product — credibility)
 Per-item CTA   — "Check price →" (NOT "Check on Amazon" — "Check price" beats it 2x in tests)
 ```
 
+**Rank badge treatment** — make it **large and left-aligned**, not a small centered chip. The badge usually lives in a centered media column (the product image is centered), and an inline-block rank silently inherits that `text-align:center`. Force it left and size it up (`display:block; width:fit-content; margin-right:auto; font-size:~1.7rem`) so the eye hits the rank first. (Strider 2026-06 feedback.)
+
 ## Non-negotiables for 2026
 
 1. **E-E-A-T markers** — Author bio with credentials, methodology disclosure, real-world testing time.

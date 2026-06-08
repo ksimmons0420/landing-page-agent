@@ -4,6 +4,19 @@ All notable changes to the Landing Page Agent plugin.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.1] — 2026-06-07
+
+Mobile-correctness patch — caught on a real phone during the Strider review: pages rendered desktop-width on mobile despite correct responsive CSS.
+
+### Added — `landing-page-builder` skill
+
+- **Viewport guard (Phase 2 — Architecture).** Paste-blocks have no `<head>` of their own, so a standalone preview — or any host theme missing the tag — renders at ~980px desktop width on phones and the mobile breakpoints never fire. New standard: a self-healing, idempotent `<meta name="viewport">` injector at the top of every block (a no-op when the host already supplies one).
+- **Preview-testing fix (Phase 8).** Corrected the multi-device preview guidance: **never force the viewport** (`setViewportSize` / `browser_resize`) to certify responsiveness — it masks a missing viewport meta and yields a false "looks great on mobile." Emulate a real device or assert the meta resolves in the live DOM, then confirm on real hardware. Forced-viewport screenshots are fine only for CSS-change checks (icon size, rank alignment).
+
+### Added — `landing-page-templates` skill
+
+- **Listicle rank badge treatment** (`templates/listicle-lp-skeleton.md`) — make the rank large and left-aligned; don't let an inline-block rank silently inherit `text-align:center` from a centered media column.
+
 ## [0.3.0] — 2026-06-07
 
 Consolidation release. Brings the full LP **build-craft** playbook into the plugin (previously a separate user-level skill) so the agent is a single, self-contained home — and bakes in the visual-polish layer learned on the Strider Bikes 6-LP build.
