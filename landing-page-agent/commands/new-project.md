@@ -53,7 +53,7 @@ For builders that don't use a file paste (Wix, Squarespace, Framer all take the 
 
 ## Step 5 — Seed the backlog
 
-Copy the experiment backlog template from `skills/templates/experiment-backlog-template.md` to `~/landing-page-agent/projects/{slug}/backlog.md`. Fill the YAML frontmatter (client, posthog_project_id, flag_key, status: queued, backlog_count: 0).
+Copy the experiment backlog template from `skills/landing-page-templates/templates/experiment-backlog-template.md` to `~/landing-page-agent/projects/{slug}/backlog.md`. Fill the YAML frontmatter (client, posthog_project_id, flag_key, status: queued, backlog_count: 0).
 
 Suggest 2–3 starter test ideas based on the audience + KPI. Ask the user to ICE-score them. Set the first test live with a hypothesis + decision date (≥7d).
 

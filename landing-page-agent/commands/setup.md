@@ -266,7 +266,7 @@ chmod 600 ~/.landing-page-agent/.env
 mkdir -p ~/landing-page-agent/projects ~/landing-page-agent/memory ~/landing-page-agent/scripts
 ```
 
-Copy the sweep script and templates from the plugin's `skills/templates/` directory into `~/landing-page-agent/scripts/` and `~/landing-page-agent/templates/`. Use `cp` from the plugin path (the user's Claude Code config exposes it via the `CLAUDE_PLUGIN_ROOT` env var or you can use `~/.claude/plugins/cache/scalehouse/landing-page-agent/`).
+Copy the sweep script and templates from the plugin's `skills/landing-page-templates/templates/` directory into `~/landing-page-agent/scripts/` and `~/landing-page-agent/templates/`. Use `cp` from the plugin path (the user's Claude Code config exposes it via the `CLAUDE_PLUGIN_ROOT` env var or you can use `~/.claude/plugins/cache/scalehouse/landing-page-agent/`).
 
 ## Step 6 — Compliance memory (if they had constraints in Q6)
 

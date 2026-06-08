@@ -4,6 +4,28 @@ All notable changes to the Landing Page Agent plugin.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] — 2026-06-07
+
+Consolidation release. Brings the full LP **build-craft** playbook into the plugin (previously a separate user-level skill) so the agent is a single, self-contained home — and bakes in the visual-polish layer learned on the Strider Bikes 6-LP build.
+
+### Added — bundled `landing-page-builder` skill (`skills/landing-page-builder/`)
+
+The complete build playbook now ships inside the plugin: Phase 1 discovery → 1.5 copy psychology → 2 architecture + section library → 3 form integration → 4 critical gotchas → 5 mobile-first → **5.5 visual & interaction polish (new)** → 6 CRO checklist → 7 SEO/GEO → 8 deploy + verify. Plus `references/` (cro-checklist, seo-geo-formulas, shopify-pages-gotchas).
+
+### Added — Phase 5.5: visual & interaction polish (the premium-feel layer)
+
+- **Iconography — Phosphor duotone.** Never ship hand-coded flat SVGs. Iconify fetch (`api.iconify.design/ph:{name}-duotone.svg`, MIT, zero deps, stays ASCII) + the CSS recolor trick (`.ph-duo path[opacity]{opacity:1;fill:#FFCD03}` for the loud two-color treatment; `.ph-duo-b` for the quiet trust treatment). Two-treatment system, sizing, and four rollout gotchas — anchor-by-path-substring, **document-order fallback for path collisions**, pick-by-meaning (heart, not checkmark), don't-icon number-chip lists.
+- **Encoding — ASCII-clean (no mobile mojibake).** `<meta charset="utf-8">` + entity conversion table + emoji→inline-SVG + `\uXXXX` in JS + the `sum(ord(c)>127)==0` gate.
+- **Interaction polish — the ui-ux-pro-max pass.** Focus-visible rings, press-scale, tabular-nums, and scroll-reveal **with a no-content-hidden failsafe** (a broken observer / no-JS visitor must still see everything), reduced-motion guard.
+- **Multi-device live preview** recipe (`http.server` + `cloudflared` quick tunnel) for remote client review before deploy.
+- Pre-deploy checklist gains: 0 raw non-ASCII · duotone icons (no flat SVGs) · focus/press/reduced-motion · scroll-reveal failsafe.
+
+### Changed
+
+- **Skills restructured to the canonical subdir layout.** `skills/SKILL.md` → `skills/landing-page-templates/SKILL.md` (templates ride along), making room for the second bundled skill. Template path references updated across `agents/landing-page-dev/agent.md`, `commands/setup.md`, and `commands/new-project.md`.
+- **Agent persona now pulls two skills at the start of every build** — `landing-page-builder` (how you build the page) alongside `karpathy-guidelines` (how you write the code).
+- Manifests + description updated to advertise BigCommerce as a first-class paste target and the build-craft/iconography capability.
+
 ## [0.2.0] — 2026-06-05
 
 Substantive feature release. Bakes in lessons from ~6 weeks of live LP work and the Scale House LP v2 review.

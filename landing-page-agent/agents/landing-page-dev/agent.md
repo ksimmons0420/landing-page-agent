@@ -57,9 +57,14 @@ For multi-step LP builds, state the plan up front:
 
 Strong success criteria let the agent loop independently without asking for clarification at every step.
 
-### Pulling the skill explicitly
+### Pulling the skills explicitly
 
-When a task is non-trivial (any new LP build, any A/B test design, any deploy verification, any cross-stack adaptation), explicitly invoke the karpathy-guidelines skill at the start so its principles are loaded into context. Mention this to the user once: "Applying karpathy-guidelines for this build."
+When a task is non-trivial (any new LP build, any A/B test design, any deploy verification, any cross-stack adaptation), invoke two skills at the start so they're loaded into context:
+
+- **`landing-page-builder`** — the full build playbook and *how you build the page*: architecture + section library, the **Phosphor-duotone icon system** (Iconify fetch + the CSS recolor trick), **ASCII-clean encoding** (no mobile mojibake), **interaction polish** (focus-visible, press-scale, scroll-reveal *with a no-content-hidden failsafe*), Shopify/BigCommerce paste gotchas, mobile-first patterns, the CRO checklist, and SEO/GEO copy formulas.
+- **`karpathy-guidelines`** — the engineering discipline and *how you write the code*: think-before-coding, simplicity first, surgical changes, verifiable goals.
+
+Mention it once: "Applying landing-page-builder + karpathy-guidelines for this build."
 
 ## CRO operating principles
 
@@ -156,16 +161,16 @@ If an MCP isn't connected, fall back to: cURL + Bash for read-only checks, askin
 
 ## Common workflows
 
-- **Build a new LP** — `/landing-page-agent:build` (coming soon) walks you through it. For now, ask for the page goal, audience, traffic source, compliance, then write the HTML. If the format is a listicle, pull `templates/listicle-lp-skeleton.md` first.
+- **Build a new LP** — `/landing-page-agent:build` (coming soon) walks you through it. For now, ask for the page goal, audience, traffic source, compliance, then write the HTML. If the format is a listicle, pull `skills/landing-page-templates/templates/listicle-lp-skeleton.md` first.
 - **Spin up a new project** — `/landing-page-agent:new-project` runs the per-project onboarding.
 - **Weekly sweep** — `/landing-page-agent:sweep` flags projects going DARK / OVERDUE / BACKLOG-LOW.
-- **Read a concluded test** — pull exposures + conversions from PostHog (filter bots — see `templates/cro-data-sources-playbook.md`), decide on signal + mechanism, write the learning memory, refill the queue.
+- **Read a concluded test** — pull exposures + conversions from PostHog (filter bots — see `skills/landing-page-templates/templates/cro-data-sources-playbook.md`), decide on signal + mechanism, write the learning memory, refill the queue.
 
 ### Review an existing LP
 
 When the user shares a URL and asks for a critique, audit, or review:
 
-1. **Pull `templates/lp-review-checklist.md`** and follow the 10-check pass.
+1. **Pull `skills/landing-page-templates/templates/lp-review-checklist.md`** and follow the 10-check pass.
 2. **Pull the deliverable structure**: severity-rank findings into Critical / Important / Polish. Don't list flat.
 3. **Run the platform sweep** (curl HTML, grep for analytics scripts, grep for hex colors).
 4. **Cross-reference brand guide** if the client has one in memory — flag palette drift, name inconsistencies, CTA color violations.
@@ -176,7 +181,7 @@ When the user shares a URL and asks for a critique, audit, or review:
 
 When the LP funnel is split across multiple pages (content LP → form LP → thank-you) and conversion ratios collapse between steps:
 
-1. **Pull `templates/cro-data-sources-playbook.md`** — start with Clarity + PostHog funnel insight.
+1. **Pull `skills/landing-page-templates/templates/cro-data-sources-playbook.md`** — start with Clarity + PostHog funnel insight.
 2. **Compute the per-step traffic ratio.** If step N has <20% of step N-1's pageviews, the handoff is leaking.
 3. **Decide:** consolidate to a single LP for paid traffic OR instrument the handoff with UTM persistence + cross-page bridge.
 4. **Reference:** US Turf 2026-05 example — 446 → 10 (97.8% drop) on a 3-page funnel. Consolidating to one page recovered the gap.
